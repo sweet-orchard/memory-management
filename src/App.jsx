@@ -22,12 +22,13 @@ import {
   Zap,
   Wind,
   AlertTriangle,
-  AppWindow,
   Copy,
   Info,
   Database,
   ShieldCheck
 } from 'lucide-react';
+import whatsappIcon from './assets/whatsapp icon.png';
+import edgeIcon from './assets/edge icon.png';
 
 // --- Theme & Style Tokens ---
 const COLORS = {
@@ -47,81 +48,76 @@ const FONT_TECH = '"JetBrains Mono", monospace';
 const FONT_UI = '"Outfit", "Inter", sans-serif';
 
 const APP_DATA = [
-  { name: "Kernel", hex: "CF FA ED FE", appId: 1 },
-  { name: "System", hex: "89 50 4E 47", appId: 1 },
-  { name: "Browser", hex: "47 45 54 20", appId: 1 },
-  { name: "Slack", hex: "7B 22 6F 6B", appId: 1 },
-  { name: "Notes", hex: "48 65 6C 6C 6F 00", appId: 2 },
-  { name: "Docker", hex: "23 21 2F 62", appId: 2 },
-  { name: "Bash", hex: "65 63 68 6f", appId: 2 },
-  { name: "Browser", hex: "47 45 54 20", appId: 2 } 
+  { name: `"Hello!" message to Ian`, hex: "CF FA ED FE", appId: 1 },
+  { name: "Somebody's profile photo", hex: "89 50 4E 47", appId: 1 },
+  { name: "Windows OS code", hex: "47 45 54 20", appId: 1 },
+  { name: "Notification sound", hex: "7B 22 6F 6B", appId: 1 },
+  { name: "Bookmark List", hex: "48 65 6C 6C 6F 00", appId: 2 },
+  { name: "YouTube video tab", hex: "23 21 2F 62", appId: 2 },
+  { name: "Image loading", hex: "65 63 68 6f", appId: 2 },
+  { name: "Windows OS code", hex: "47 45 54 20", appId: 2 } 
 ];
 
 const SCENARIOS = {
   NORMAL: [
-    { title: "1. Apps Use Virtual Addresses", desc: "Both apps request GVA 0x7ffd1234. These are private 'fake' addresses.", layer: "gvm", analogy: { icon: <Home size={14}/>, text: "Apartment #502" } },
-    { title: "2. Isolation Translation", desc: "Linux uses individual Page Tables per App to prevent memory overlapping.", layer: "pt-layer", analogy: { icon: <Building size={14}/>, text: "Building Number" } },
-    { title: "3. Hypervisor Mapping", desc: "The Hypervisor maps Guest pages to unique real hardware frames.", layer: "gpm", analogy: { icon: <MapPin size={14}/>, text: "Actual Street Address" } },
-    { title: "4. Hardware Silicon Write", desc: "CPU writes to silicon. App 1 and App 2 are physically separated in RAM.", layer: "hpm", analogy: { icon: <Globe size={14}/>, text: "City Administration" } }
+    { title: "1. Apps ask for memory", desc: "WhatsApp inside the virtual machine needs to save \"Hello!\" so it asks for address 5000. Edge also asks for address 5000. Both apps use the same address because every app starts with the same default memory layout.", layer: "gvm", analogy: { icon: <Home size={14}/>, text: "Apartment #502" } },
+    { title: "2. Page table sorts out the addresses", desc: "OS sees both apps want address 5000. The page table translates them to different addresses so they don't collide. WhatsApp's 5000 becomes 2000. Edge’s 5000 becomes 3000. Problem solved - they have different addresses.", layer: "pt-layer", analogy: { icon: <Building size={14}/>, text: "Building Number" } },
+    { title: "3. Hypervisor Mapping", desc: "The page table gave WhatsApp address 2000. Now WhatsApp wants actually use physical location and be able to store it. BUT the hypervisor says “stop, stop, stop, this is not your real address, your REAL address is 2309. The hypervisor redirects the data into another location with another address.", layer: "gpm", analogy: { icon: <MapPin size={14}/>, text: "Actual Street Address" } },
+    { title: "4. Actual data storing", desc: "This is the moment where the data will be actually stored into a physical memory. WhatsApp message “Hello!” is now stored within the address 2309 and edge's data (bookmark list) is stored in another address 4320.", layer: "hpm", analogy: { icon: <Globe size={14}/>, text: "City Administration" } }
   ],
   SHADOW: [
-    { title: "1. Shadow Pre-Check", desc: "Apps request GVA. Hypervisor has pre-shadowed maps for both processes.", layer: "gvm", analogy: { icon: <Zap size={14}/>, text: "VIP Shortcut" } },
-    { title: "2. Fast-Path Hit", desc: "MMU finds direct maps to hardware in the Shadow Page Table (SPT).", layer: "spt-layer", analogy: { icon: <Zap size={14}/>, text: "Saved Favorite" } },
-    { title: "3. Direct Hardware Jump", desc: "CPU jumps directly to silicon for both apps, bypassing guest OS logic.", layer: "hpm", analogy: { icon: <Globe size={14}/>, text: "Instant Delivery" } }
+    { title: "1. Apps request memory (shadow pre-check)", desc: "WhatsApp requests address 5000. Edge requests address 5000. The hypervisor already created shadow page tables for both apps ahead of time. These shadow tables map directly from virtual addresses to physical RAM addresses. The hypervisor is ready to translate both requests.", layer: "gvm", analogy: { icon: <Zap size={14}/>, text: "VIP Shortcut" } },
+    { title: "2. Direct addresses to physical RAM", desc: "The hypervisor uses the shadow page table to translate directly without using 2 translations. WhatsApp’s address 5000 becomes HPM address 4021. Edge’s address 5000 becomes HPM address 1792. The shadow table skips the GPM layer completely. Both translations happen instantly without the guest OS knowing.", layer: "spt-layer", analogy: { icon: <Zap size={14}/>, text: "Saved Favorite" } },
+    { title: "3. Actual data storing using shadowing", desc: `WhatsApp’s message “Hello!” is stored at physical address 4021. The data went straight from virtual addresses to physical RAM. No GPM middle step. Faster memory access but the hypervisor must update shadow tables whenever the VM’s OS changes its page tables. This adds CPU overhead and memory usage.`, layer: "hpm", analogy: { icon: <Globe size={14}/>, text: "Instant Delivery" } }
   ],
   BALLOON: [
-    { title: "1. Host Pressure", desc: "Physical RAM is low. Red Alert triggered.", layer: "hpm", analogy: { icon: <Wind size={14}/>, text: "Tax Notice" } },
-    { title: "2. Driver Inflation", desc: "Balloon Driver inflates in Guest memory to reclaim non-essential pages.", layer: "gvm", analogy: { icon: <Box size={14}/>, text: "Reserving Rooms" } },
-    { title: "3. Resource Locking", desc: "Guest OS locks physical RAM for the driver.", layer: "gpm", analogy: { icon: <ShieldAlert size={14}/>, text: "Marking Occupied" } },
-    { title: "4. Hypervisor Reclaim", desc: "Physical frames recovered. System memory is now stable.", layer: "hpm", analogy: { icon: <Globe size={14}/>, text: "Public Use" } }
+    { title: "1. The host is running out of RAM", desc: "Physical RAM is low. Red Alert triggered. The VM running WhatsApp and Edge was assigned 4GB. But the host needs some of that RAM back for itself. The hypervisor detects the pressure and triggers the balloon driver.", layer: "hpm", analogy: { icon: <Wind size={14}/>, text: "Tax Notice" } },
+    { title: "2. Driver Inflation", desc: "The hypervisor tells the balloon driver inside the VM to inflate. The balloon driver asks the OS for 1GB of memory. The OS thinks this is a normal app requesting memory, so it gives the balloon 1GB.", layer: "gvm", analogy: { icon: <Box size={14}/>, text: "Reserving Rooms" } },
+    { title: "3. Resource Locking", desc: "The OS finds 1GB of memory that WhatsApp and Edge aren’t using much. The OS hands those pages to the balloon driver. Now WhatsApp and Edge can’t touch those pages anymore. From the VM’s perspective, the balloon is using that memory.", layer: "gpm", analogy: { icon: <ShieldAlert size={14}/>, text: "Marking Occupied" } },
+    { title: "4. Hypervisor Reclaim", desc: "The hypervisor sees which physical RAM pages the balloon took. The hypervisor grabs those physical pages back and gives them to the host. The VM still thinks it has 4GB, but 1GB is just balloon memory that goes nowhere. The host now has more free RAM.", layer: "hpm", analogy: { icon: <Globe size={14}/>, text: "Public Use" } }
   ],
   TPS: [
-    { title: "1. Content ID Scan", desc: "Hypervisor scans Browser pages in App 1 and App 2 to find duplicates.", layer: "gvm", icon: <Copy size={14}/> },
-    { title: "2. Translation Check", desc: "Hypervisor monitors the Guest Page Table mappings for both instances.", layer: "pt-layer", icon: <Copy size={14}/> },
-    { title: "3. Identity Found & Merge", desc: "Both map to a single silicon frame. One redundant frame is evacuated.", layer: "gpm", icon: <Copy size={14}/> },
-    { title: "4. Deduplication Reclaim", desc: "The duplicate hardware frame is freed. Memory is shared successfully.", layer: "hpm", icon: <Copy size={14}/> }
+    { title: "1. Hypervisor Scans for Duplicates", desc: "WhatsApp and Edge are both running. They both loaded Windows OS code into memory. The hypervisor scans their memory pages in the background and finds that WhatsApp has Windows OS code at physical address xxxx and Edge has the exact same Windows OS code at physical address xoxo. The content is identical.", layer: "gvm", icon: <Copy size={14}/> },
+    { title: "2. Hypervisor Detects Match", desc: "The hypervisor compares the pages bytes by byte. They match perfectly. Both apps are storing same Windows OS code in two different physical locations. This is wasted RAM. The hypervisor decides to merge them.", layer: "pt-layer", icon: <Copy size={14}/> },
+    { title: "3. Redirect to Single Frame  ", desc: "GPU has heard hypervisor and creates a similar address location for both apps. The hypervisor keeps the Windows OS code at physical address xxxx and updates Edge’s mapping to point to xxxx instead of xoxo. Now both WhatsApp and Edge point to the same physical memory location. They’re sharing the page. Neither app knows this happened.", layer: "gpm", icon: <Copy size={14}/> },
+    { title: "4. Free Duplicate Memory", desc: "The hypervisor frees physical address  xoxo because nobody needs it anymore. The duplicate memory is gone. Both apps still access the same Windows OS code, but now it only takes up one physical code, but now it only takes up one physical page instead of two. Memory saved. If either app tries to modify the page, the hypervisor creates a separate copy for the app.", layer: "hpm", icon: <Copy size={14}/> }
   ]
 };
 
 const TECH_SPECS = {
   NORMAL: {
-    label: "SLAT Architecture",
+    label: "NORMAL TRACE",
     icon: <Binary className="text-sky-400" size={18} />,
-    summary: "Second-Level Address Translation (Intel EPT / AMD RVI) provides hardware-assisted memory virtualization.",
-    details: [
-      { head: "Standard Logic", body: "The Guest OS handles GVA to GPA translation. The Hypervisor handles GPA to HPA using hardware page tables." },
-      { head: "Why use it?", body: "It offers near-native performance because the hardware MMU performs the translation walkthrough without software traps." },
-      { head: "System Impact", body: "Lowest possible CPU overhead. It is the gold standard for high-performance virtualization." }
+    paragraphs: [
+      "This is just a normal tracing and it provides the best isolation. Two layers of isolation = two layers of translation. The VM has no idea it’s being virtualised. WhatsApp thinks it’s running on real hardware with real addresses. It’s completely fooled. This is why it can run Windows inside Linux without Windows knowing.",
+      "This approach with double translation isn’t great because it creates delays, slows down the system and takes memory to store all these addresses. A normal app makes millions of memory accesses per second. Each access needs two translations. That’s why even a tiny delay per translation may create big issues on running virtualisation.",
+      "This is where hardware-assisted virtualisation comes in. Modern CPUs have special features that handle memory translation in hardware instead of software. This makes the double translation much faster and reduces the performance overhead significantly. It’s also called SLAT architecture."
     ]
   },
   SHADOW: {
     label: "Shadow Paging Logic",
     icon: <Zap className="text-purple-400" size={18} />,
-    summary: "A software-based translation method where the hypervisor creates its own 'Shadow' tables for the CPU.",
-    details: [
-      { head: "The Mechanism", body: "The Hypervisor intercepts (traps) every guest update to its internal page tables to update the Shadow Table." },
-      { head: "Why use it?", body: "Enables virtualization on older hardware that lacks SLAT support. Essential for legacy compatibility." },
-      { head: "Performance Hit", body: "High CPU overhead. Every context switch or memory map change requires hypervisor intervention (VM-Exits)." }
+    paragraphs: [
+      "The \"shadow\" name comes from the fact that this table shadows the VM's page table. It's a hidden copy that the VM doesn't know exists. It provides faster memory access because it doesn’t have the double translation, it create a dirrect address that the hardware could use to store its data. However, the OS updates its own page table more often for shadowing because the hypervisor must detect the change and update the dhadow table to match. This syncing creates overhead and slows down performance because every time the VM updates its page table, the hypervisor has to detect that change and update its shadow copy.",
+      "Shadow paging is still used today on older CPUs that don't have hardware virtualisation support. But modern systems use SLAT instead because it's much faster and simpler."
     ]
   },
   BALLOON: {
     label: "Memory Ballooning",
     icon: <Wind className="text-orange-400" size={18} />,
-    summary: "A dynamic resource reclamation technique using a proprietary driver inside the Guest OS.",
-    details: [
-      { head: "How it works", body: "When the host is under pressure, the balloon driver 'inflates' by requesting RAM from the guest kernel." },
-      { head: "The Strategy", body: "It forces the guest OS to decide which pages are least important, effectively pushing them to the guest's own disk swap." },
-      { head: "Resource Impact", body: "Allows high memory over-commitment. The host can safely run more VMs than physical RAM would otherwise permit." }
+    paragraphs: [
+      "The balloon driver is a special piece of software installed inside the guest OS that communicates with the hypervisor. When the host runs low on memory, the hypervisor sends a signal to the balloon driver to \"inflate\" - meaning it requests memory from the guest OS. The guest OS thinks the balloon driver is just a normal application asking for RAM, so it allocates memory pages to it.",
+      "Once the balloon driver receives these pages, it doesn't actually use them for anything. Instead, it just holds onto them, preventing the guest OS from using that memory. The hypervisor then reclaims the corresponding physical memory pages and gives them back to the host system.",
+      "The VM doesn't actually need less memory. It's being forced to give up RAM. If WhatsApp or Edge suddenly need that memory back, the VM's OS has to swap data to disk because the balloon is holding the RAM. This makes the VM slow. Heavy ballooning can cripple VM performance because disk is 1000x slower than RAM."
     ]
   },
   TPS: {
     label: "Transparent Page Sharing",
     icon: <Copy className="text-teal-400" size={18} />,
-    summary: "A content-based deduplication engine that shares identical memory pages across different Virtual Machines.",
-    details: [
-      { head: "Scanning Logic", body: "Background tasks hash pages. If bit-patterns match, the hypervisor merges them into one physical copy." },
-      { head: "The Benefit", body: "Massive RAM savings for VDI (Virtual Desktops) where 20+ VMs run identical Windows kernels and apps." },
-      { head: "Security Impact", body: "Modern implementations use 'salting' to prevent side-channel attacks where one VM tries to guess another VM's data." }
+    paragraphs: [
+      "VMs running the same OS have tons of duplicate pages. Windows system files, common libraries, shared code. All identical. Storing each copy separately wastes RAM. TPS finds the duplicates and merges them. One physical page instead of multiple copies.",
+      "The hypervisor scans memory pages and creates a hash for each. Same hash = same content. When it finds matches, it points both VMs to one physical page and frees the duplicate. The VMs have no idea. They think they each have their own memory. In case when one of the apps writes a unique data that is different from the duplicate,  the hypervisor will immediately create a separate copy for the app.",
+      "It frees up some space but it might have also some security issues. Shared pages can leak information between VMs through timing attacks. An attacker in one VM can measure how long memory access takes and figure out if another VM is using the same page. This reveals what the other VM is doing. Modern systems disable TPS by default because performance isn't worth the security risk."
     ]
   }
 };
@@ -142,10 +138,17 @@ const App = () => {
       appName: APP_DATA[i].name,
       hexData: APP_DATA[i].hex,
       gva: i === 4 ? `0x7FFD1234` : i === 0 ? `0x7FFD1234` : `0x${(i * 0x1000 + 0x400000).toString(16).toUpperCase().padStart(8, '0')}`,
-      gpa: i === 4 ? `m2` : i === 0 ? `m1` : `p${(i + 10).toString(16).toUpperCase()}`,
+      gpa: i === 0 ? `m1(2309)` :
+           i === 1 ? `pB(3801)` :
+           i === 2 ? `pC(892)` :
+           i === 3 ? `pD(4523)` :
+           i === 4 ? `m2(4320)` :
+           i === 5 ? `pF(3256)` :
+           i === 6 ? `p10(1678)` :
+           `p11(4012)`,
       hpaIndex: i === 4 ? 14 : i === 0 ? 2 : (i * 2 + 1) % 16,
       hpa: i === 4 ? `#9182` : i === 0 ? `#4021` : `#${(i * 128 + 1024).toString()}`,
-      ptEntry: i === 0 ? "m1" : i === 1 ? "pB" : i === 2 ? "pC" : i === 3 ? "pD" : i === 4 ? "m2" : i === 5 ? "pF" : i === 6 ? "p10" : "p11",
+      ptEntry: i === 0 ? "m1" : i === 1 ? "pB" : i === 2 ? "pC" : i === 3 ? "pD" : i === 4 ? "p10" : i === 5 ? "pF" : i === 6 ? "m2" : "p11",
       sptEntry: i === 4 ? `#9182` : i === 0 ? `#4021` : `#${(i * 128 + 1024).toString()}`,
       ptTarget: i === 4 ? 6 : i, 
       isBalloonable: [2, 3, 5, 6, 7].includes(i),
@@ -175,7 +178,10 @@ const App = () => {
 
   const handleNext = () => {
     if (scenarioStep < currentScenario.length - 1) {
-      setScenarioStep(s => s + 1);
+      setScenarioStep(s => {
+        const nextStep = s + 1;
+        return nextStep;
+      });
       if (scenarioType === 'TPS') setSelectedBlock(null);
       else if (scenarioType !== 'BALLOON') setSelectedBlock(memoryBlocks[4]);
     } else {
@@ -186,11 +192,16 @@ const App = () => {
   };
 
   const startScenario = (type) => {
-    setScenarioType(type);
-    setScenarioStep(0);
-    if (type === 'TPS' || type === 'BALLOON') setSelectedBlock(null);
-    else setSelectedBlock(memoryBlocks[4]);
-    setTimeout(() => setRenderTrigger(prev => prev + 1), 100);
+    setScenarioType(null);
+    setScenarioStep(-1);
+    setSelectedBlock(null);
+    setTimeout(() => {
+      setScenarioType(type);
+      setScenarioStep(0);
+      if (type === 'TPS' || type === 'BALLOON') setSelectedBlock(null);
+      else setSelectedBlock(memoryBlocks[4]);
+      setTimeout(() => setRenderTrigger(prev => prev + 1), 100);
+    }, 0);
   };
 
   return (
@@ -203,37 +214,19 @@ const App = () => {
              backgroundSize: '40px 40px'
            }} />
       
-      <header className="relative z-10 flex flex-col items-start mb-6 gap-2 border-b border-white/5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-sky-500/10 border border-sky-500/30 rounded-lg">
-            <Cpu className="text-sky-400" size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 uppercase leading-none">
-              Hyper_Memory_Monitor
+      <div className="relative z-10 max-w-[1400px] mx-auto w-full">
+        <header className="flex flex-col items-start mb-4 gap-1 border-b border-white/5 pb-2">
+          <div className="pl-5">
+            <h1 className="text-3xl font-black tracking-[0.2em] text-white uppercase leading-none" style={{ fontFamily: FONT_TECH }}>
+              Memory Management Virtualisation
             </h1>
           </div>
-        </div>
 
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={() => startScenario('NORMAL')} className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${scenarioType === 'NORMAL' ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
-            <Activity size={14} /><span style={{ fontFamily: FONT_TECH, fontSize: '10px' }}>TRACE_SLAT</span>
-          </button>
-          <button onClick={() => startScenario('SHADOW')} className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${scenarioType === 'SHADOW' ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
-            <Zap size={14} /><span style={{ fontFamily: FONT_TECH, fontSize: '10px' }}>TRACE_SHADOW</span>
-          </button>
-          <button onClick={() => startScenario('BALLOON')} className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${scenarioType === 'BALLOON' ? 'bg-orange-500/20 border-orange-400 text-orange-300 shadow-[0_0_10px_rgba(249,115,22,0.2)]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
-            <Wind size={14} /><span style={{ fontFamily: FONT_TECH, fontSize: '10px' }}>TRACE_BALLOONING</span>
-          </button>
-          <button onClick={() => startScenario('TPS')} className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${scenarioType === 'TPS' ? 'bg-teal-500/20 border-teal-400 text-teal-300 shadow-[0_0_10px_rgba(45,212,191,0.2)]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
-            <Copy size={14} /><span style={{ fontFamily: FONT_TECH, fontSize: '10px' }}>TRACE_TPS</span>
-          </button>
-        </div>
-      </header>
+        </header>
 
-      <main className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+        <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
         
-        <div className="lg:col-span-8 flex flex-col gap-5 relative">
+        <div className="lg:col-span-8 flex flex-col gap-5 relative h-full">
           
           <svg className="absolute inset-0 pointer-events-none z-20 w-full h-full">
             <AnimatePresence>
@@ -307,13 +300,19 @@ const App = () => {
           </svg>
 
           {/* GVM Layer */}
-          <MemoryLayer id="gvm" title="GVM // GUEST VIRTUAL LAYER" color={COLORS.primary} subtitle="Isolated Address Spaces" isActive={currentScenario[scenarioStep]?.layer === 'gvm'}>
+          <MemoryLayer id="gvm" title="GVM // GUEST VIRTUAL MEMORY" color={COLORS.primary} subtitle="" isActive={currentScenario[scenarioStep]?.layer === 'gvm'}>
             <div className="grid grid-cols-2 gap-4">
               {[1, 2].map(appNum => (
                 <div key={`app-container-${appNum}`} className="bg-white/5 border border-white/10 rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <AppWindow size={10} className="text-sky-400" />
-                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Application {appNum}</span>
+                    {appNum === 1 ? (
+                      <img src={whatsappIcon} alt="WhatsApp icon" className="h-4 w-4 block -mt-0.5" loading="lazy" />
+                    ) : (
+                      <img src={edgeIcon} alt="Edge icon" className="h-4 w-4 block -mt-0.5" loading="lazy" />
+                    )}
+                    <span className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">
+                      {appNum === 1 ? 'WhatsApp' : 'Edge'}
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {memoryBlocks.filter(b => b.appId === appNum).map(block => {
@@ -325,7 +324,7 @@ const App = () => {
                       
                       return (
                         <div key={`gvm-rect-${block.id}`} id={`gvm-block-${block.id}`} onClick={() => { setSelectedBlock(block); setScenarioType(null); }}
-                          className={`h-11 rounded border cursor-pointer transition-all flex flex-col items-center justify-center text-[9px] font-mono leading-none ${
+                          className={`h-11 rounded border cursor-pointer transition-all flex flex-col items-center justify-center text-[11px] font-mono leading-none ${
                             arrived ? (isTPSTarget ? 'border-teal-400 bg-teal-400/20 shadow-lg' : 'border-sky-400 bg-sky-400/20 shadow-lg') : 
                             (isSelected || isSecondary) ? 'border-sky-400 bg-transparent' :
                             isBalloonTarget ? 'border-orange-500/80 bg-orange-500/10 shadow-lg' :
@@ -333,9 +332,9 @@ const App = () => {
                           }`}
                         >
                           <span className={arrived ? 'text-white font-bold' : (isTPSTarget ? 'text-teal-400' : isBalloonTarget ? 'text-orange-400 font-black' : (isSelected || isSecondary) ? 'text-sky-400' : 'text-sky-300')}>
-                            {isBalloonTarget ? 'DRV' : `"${block.appName}"`}
+                            {isBalloonTarget ? 'DRV' : block.appName}
                           </span>
-                          {isTPSTarget && <span className="mt-1 text-[7px] text-teal-300/60 uppercase">D-UP_ID: 104F</span>}
+                          {isTPSTarget && <span className="mt-1 text-[9px] text-teal-300/60 uppercase">Duplicate_ID: 104F</span>}
                         </div>
                       );
                     })}
@@ -348,7 +347,7 @@ const App = () => {
           {/* Logic Layers */}
           <div className="grid grid-cols-2 gap-4">
              <div className={`bg-white/5 border rounded-xl p-3 backdrop-blur-md transition-all ${currentScenario[scenarioStep]?.layer === 'pt-layer' || (scenarioType === 'TPS' && scenarioStep >= 1 && scenarioStep <= 2) ? 'border-sky-400 bg-sky-400/10' : 'border-white/10 opacity-70'}`}>
-                <div className="flex items-center gap-2 mb-2"><Binary size={10} className="text-sky-400" /><span className="text-[9px] font-bold uppercase text-slate-400">Page Table</span></div>
+                <div className="flex items-center gap-2 mb-2"><Binary size={14} className="text-sky-400 -mt-0.5" /><span className="text-[11px] font-bold uppercase text-slate-400">Page Table</span></div>
                 <div className="grid grid-cols-4 gap-1.5">
                    {memoryBlocks.map((block, idx) => {
                      const isSelectedPT = (scenarioType === 'NORMAL') && selectedBlock?.ptTarget === idx;
@@ -357,13 +356,13 @@ const App = () => {
                      const isPathActive = (isSelectedPT || isSecondaryPT || isTPSTargetPT) && scenarioStep >= 1;
                      const isArrivedNow = isPathActive && currentScenario[scenarioStep]?.layer === 'pt-layer';
                      return (
-                       <div key={`pt-rect-${idx}`} id={`pt-layer-block-${idx}`} className={`h-5 rounded border text-[7px] font-mono flex items-center justify-center transition-all ${ isArrivedNow ? (isTPSTargetPT ? 'border-teal-400 bg-teal-400/20' : 'border-sky-400 bg-sky-400/20 shadow-md scale-105') : isPathActive ? (isTPSTargetPT ? 'border-teal-400/50 text-teal-200' : 'border-sky-400 bg-transparent text-sky-200') : 'border-white/5 bg-white/5 text-slate-500'}`}>{block.ptEntry}</div>
+                       <div key={`pt-rect-${idx}`} id={`pt-layer-block-${idx}`} className={`h-10 rounded border text-[12px] font-mono flex items-center justify-center transition-all ${ isArrivedNow ? (isTPSTargetPT ? 'border-teal-400 bg-teal-400/20' : 'border-sky-400 bg-sky-400/20 shadow-md scale-105') : isPathActive ? (isTPSTargetPT ? 'border-teal-400/50 text-teal-200' : 'border-sky-400 bg-transparent text-sky-200') : 'border-white/5 bg-white/5 text-slate-500'}`}>{block.ptEntry}</div>
                      );
                    })}
                 </div>
              </div>
              <div className={`bg-white/5 border rounded-xl p-3 backdrop-blur-md transition-all ${currentScenario[scenarioStep]?.layer === 'spt-layer' && scenarioType === 'SHADOW' ? 'border-purple-400 bg-purple-400/20 shadow-lg' : 'border-white/10 opacity-70'}`}>
-                <div className="flex items-center gap-2 mb-2"><Zap size={10} className="text-purple-400" /><span className="text-[9px] font-bold uppercase text-slate-400">Shadow Table</span></div>
+                <div className="flex items-center gap-2 mb-2"><Zap size={14} className="text-purple-400 -mt-0.5" /><span className="text-[11px] font-bold uppercase text-slate-400">Shadow Table</span></div>
                 <div className="grid grid-cols-4 gap-1.5">
                    {memoryBlocks.map((block, idx) => {
                      const isShadowMode = scenarioType === 'SHADOW';
@@ -372,7 +371,7 @@ const App = () => {
                      const isPathActive = (isSelectedSPT || isSecondarySPT) && scenarioStep >= 1;
                      const isArrivedNow = isPathActive && currentScenario[scenarioStep]?.layer === 'spt-layer';
                      return (
-                       <div key={`spt-rect-${idx}`} id={`spt-layer-block-${idx}`} className={`h-5 rounded border text-[7px] font-mono flex items-center justify-center transition-all ${ isArrivedNow ? 'border-purple-400 bg-purple-400/30 shadow-md scale-105' : isPathActive ? 'border-purple-400 bg-transparent text-purple-200' : 'border-white/5 bg-white/5 text-slate-600'}`}>{block.sptEntry}</div>
+                       <div key={`spt-rect-${idx}`} id={`spt-layer-block-${idx}`} className={`h-10 rounded border text-[12px] font-mono flex items-center justify-center transition-all ${ isArrivedNow ? 'border-purple-400 bg-purple-400/30 shadow-md scale-105' : isPathActive ? 'border-purple-400 bg-transparent text-purple-200' : 'border-white/5 bg-white/5 text-slate-600'}`}>{block.sptEntry}</div>
                      );
                    })}
                 </div>
@@ -380,7 +379,7 @@ const App = () => {
           </div>
 
           {/* GPM Layer */}
-          <MemoryLayer id="gpm" title="GPM // INTERMEDIATE LOGIC" color={COLORS.logic} subtitle="Guest Physical Frames" isActive={currentScenario[scenarioStep]?.layer === 'gpm'}>
+          <MemoryLayer id="gpm" title="GPM // Guest Physical Memory" color={COLORS.logic} subtitle="" isActive={currentScenario[scenarioStep]?.layer === 'gpm'}>
             <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
               {memoryBlocks.map(block => {
                 const isBalloonTarget = scenarioType === 'BALLOON' && scenarioStep >= 2 && block.isBalloonable;
@@ -398,7 +397,7 @@ const App = () => {
                       'border-amber-500/20 bg-amber-500/5'
                     }`}
                   >
-                    <span style={{ fontFamily: FONT_TECH, fontSize: '10px' }} className={arrived ? 'text-amber-200 font-bold' : isBalloonTarget ? 'text-orange-200 font-black' : isPathActive ? (isTPSTarget ? 'text-teal-300' : 'text-amber-400 font-bold') : 'text-slate-400'}>
+                    <span style={{ fontFamily: FONT_TECH, fontSize: '12px' }} className={arrived ? 'text-amber-200 font-bold' : isBalloonTarget ? 'text-orange-200 font-black' : isPathActive ? (isTPSTarget ? 'text-teal-300' : 'text-amber-400 font-bold') : 'text-slate-400'}>
                       {isBalloonTarget ? 'LOCK' : block.gpa}
                     </span>
                   </div>
@@ -408,18 +407,21 @@ const App = () => {
           </MemoryLayer>
 
           {/* HPM Layer */}
-          <MemoryLayer id="hpm" title="HPM // SILICON FABRIC" color={COLORS.secondary} subtitle="Host Physical Hardware" isActive={currentScenario[scenarioStep]?.layer === 'hpm'}>
+          <MemoryLayer id="hpm" title="HPM // Host Physical Memory" color={COLORS.secondary} subtitle="" isActive={currentScenario[scenarioStep]?.layer === 'hpm'}>
             <div className="relative">
-              <AnimatePresence>
-                {scenarioType === 'BALLOON' && scenarioStep === 0 && (
-                  <motion.div initial={{ opacity: 0, y: -5, scale: 0.95 }} animate={{ opacity: [0.7, 1, 0.7], y: 0 }} transition={{ duration: 2, repeat: 2, ease: "easeInOut" }} exit={{ opacity: 0, scale: 0.95 }} className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none" key="pressure-warning">
-                    <div className="bg-orange-500/60 backdrop-blur-md border border-orange-400/40 px-5 py-2.5 rounded-xl flex items-center gap-3 shadow-[0_0_30px_rgba(249,115,22,0.2)]">
-                      <AlertTriangle className="text-orange-950" size={18} />
-                      <p className="text-[12px] font-black text-orange-950 uppercase tracking-widest leading-none">Low Memory Warning</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {scenarioType === 'BALLOON' && scenarioStep >= 0 && scenarioStep < currentScenario.length - 1 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                  animate={{ opacity: [0, 1, 0], y: 0 }}
+                  transition={{ duration: 1.2, ease: "easeInOut", repeat: Infinity }}
+                  className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+                >
+                  <div className="bg-orange-500/60 backdrop-blur-md border border-orange-400/40 px-5 py-2.5 rounded-xl flex items-center gap-3 shadow-[0_0_30px_rgba(249,115,22,0.2)]">
+                    <AlertTriangle className="text-orange-950" size={18} />
+                    <p className="text-[12px] font-black text-orange-950 uppercase tracking-widest leading-none">Low Memory Warning</p>
+                  </div>
+                </motion.div>
+              )}
 
               <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
                 {Array.from({ length: 16 }).map((_, i) => {
@@ -438,6 +440,7 @@ const App = () => {
 
                   return (
                     <motion.div key={`hpm-rect-${i}`} id={`hpm-block-${i}`}
+                      initial={false}
                       animate={isArrivedAtHPM && (isSelected || isSecondary) ? { backgroundColor: 'rgba(168, 85, 247, 0.4)', borderColor: COLORS.secondary, scale: 1.1 } : 
                                isActiveInPath ? { backgroundColor: 'rgba(168, 85, 247, 0.1)', borderColor: 'rgba(168, 85, 247, 0.8)', boxShadow: '0 0 10px rgba(168, 85, 247, 0.3)' } :
                                isHighPressureActive ? { borderColor: [COLORS.pressure, 'rgba(239, 68, 68, 0.3)', COLORS.pressure], backgroundColor: ['rgba(239, 68, 68, 0.1)', 'rgba(239, 68, 68, 0.25)', 'rgba(239, 68, 68, 0.1)'] } :
@@ -448,10 +451,10 @@ const App = () => {
                                isTPSFrame2Duplicate && scenarioStep === 2 ? { backgroundColor: 'rgba(168, 85, 247, 0.2)', borderColor: COLORS.secondary } :
                                { backgroundColor: 'rgba(15, 23, 42, 0.5)', borderColor: 'rgba(168, 85, 247, 0.1)' }}
                       transition={isHighPressureActive ? { duration: 2, repeat: 2 } : {}}
-                      className={`h-9 rounded-lg border transition-all duration-300 relative flex items-center justify-center ${isActiveInPath ? 'z-20' : ''}`}
+                      className={`h-12 rounded-lg border transition-all duration-300 relative flex items-center justify-center ${isActiveInPath ? 'z-20' : ''}`}
                     >
                       {isBalloonReclaimed || isTPSReclaimed ? (
-                        <span className="text-[8px] text-slate-300 font-black tracking-tighter">FREE</span>
+                        <span className="text-[10px] text-slate-300 font-black tracking-tighter">FREE</span>
                       ) : (mappedBlock || isHighPressureActive || isUnderPressureStatic || isActiveInPath || isOtherInBalloonFinal || isTPSFrame1 || (isTPSFrame2Duplicate && scenarioStep === 2)) ? (
                         <div className={`w-1.5 h-1.5 rounded-full ${ (isSelected || isSecondary) && isArrivedAtHPM ? 'bg-white shadow-[0_0_8px_white]' : isHighPressureActive ? 'bg-red-500 animate-pulse' : (isActiveInPath ? 'bg-purple-400' : isOtherInBalloonFinal ? 'bg-orange-500/50' : isTPSFrame1 ? 'bg-teal-400 shadow-[0_0_10px_teal]' : 'bg-purple-500/30')}`} />
                       ) : null}
@@ -465,7 +468,21 @@ const App = () => {
         </div>
 
         {/* Info Panels */}
-        <div className="lg:col-span-4 flex flex-col gap-5">
+        <div className="lg:col-span-4 flex flex-col gap-5 h-full">
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => startScenario('NORMAL')} className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${scenarioType === 'NORMAL' ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.2)]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+              <Activity size={14} /><span style={{ fontFamily: FONT_TECH, fontSize: '10px' }}>NORMAL</span>
+            </button>
+            <button onClick={() => startScenario('SHADOW')} className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${scenarioType === 'SHADOW' ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+              <Zap size={14} /><span style={{ fontFamily: FONT_TECH, fontSize: '10px' }}>SHADOW</span>
+            </button>
+            <button onClick={() => startScenario('BALLOON')} className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${scenarioType === 'BALLOON' ? 'bg-orange-500/20 border-orange-400 text-orange-300 shadow-[0_0_10px_rgba(249,115,22,0.2)]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+              <Wind size={14} /><span style={{ fontFamily: FONT_TECH, fontSize: '10px' }}>BALLOON</span>
+            </button>
+            <button onClick={() => startScenario('TPS')} className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${scenarioType === 'TPS' ? 'bg-teal-500/20 border-teal-400 text-teal-300 shadow-[0_0_10px_rgba(45,212,191,0.2)]' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+              <Copy size={14} /><span style={{ fontFamily: FONT_TECH, fontSize: '10px' }}>TPS</span>
+            </button>
+          </div>
           {scenarioType && (
             <div className={`border rounded-xl p-5 shadow-xl transition-colors ${
               scenarioType === 'SHADOW' ? 'bg-purple-500/10 border-purple-500/50' : 
@@ -485,47 +502,62 @@ const App = () => {
             </div>
           )}
 
-          <GlassCard title="HYPERVISOR INTELLIGENCE" accent="#fff" icon={<Info size={14}/>}>
+          <div className="flex-1">
+            <GlassCard title="SMART EXPLANATION" accent="#fff" icon={<Info size={14}/>}>
             <AnimatePresence mode="wait">
               {scenarioType ? (
-                <motion.div key={scenarioType} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                <motion.div key={scenarioType} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                   <div className="flex items-center gap-3 pb-3 border-b border-white/5">
                     {TECH_SPECS[scenarioType].icon}
                     <span className="text-sm font-black uppercase tracking-tighter text-white">{TECH_SPECS[scenarioType].label}</span>
                   </div>
-                  <p className="text-xs text-slate-400 italic leading-relaxed">{TECH_SPECS[scenarioType].summary}</p>
-                  <div className="space-y-4">
-                    {TECH_SPECS[scenarioType].details.map((item, i) => (
-                      <div key={i} className="bg-white/5 p-3 rounded-lg border border-white/5">
-                        <h4 className="text-[10px] font-black uppercase text-slate-500 mb-1">{item.head}</h4>
-                        <p className="text-[11px] text-slate-300 leading-snug">{item.body}</p>
+                  {TECH_SPECS[scenarioType].paragraphs ? (
+                    <div className="space-y-3">
+                      {TECH_SPECS[scenarioType].paragraphs.map((text, i) => (
+                        <p key={i} className="text-sm text-slate-300 leading-relaxed">{text}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-slate-400 italic leading-relaxed">{TECH_SPECS[scenarioType].summary}</p>
+                      <div className="space-y-4">
+                        {TECH_SPECS[scenarioType].details.map((item, i) => (
+                          <div key={i} className="bg-white/5 p-3 rounded-lg border border-white/5">
+                            <h4 className="text-[10px] font-black uppercase text-slate-500 mb-1">{item.head}</h4>
+                            <p className="text-[11px] text-slate-300 leading-snug">{item.body}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </motion.div>
               ) : (
                 <div className="h-64 flex flex-col items-center justify-center text-center px-6" key="default">
                    <div className="p-4 bg-white/5 rounded-full mb-4 opacity-20"><ShieldCheck size={40} /></div>
                    <p className="text-xs text-slate-500 leading-relaxed font-medium italic">
-                     Select a scenario trace to analyze hypervisor logic, performance impact, and resource management strategies.
+                     Click on one of the buttons above to start a memory management scenario demonstration.
                    </p>
                 </div>
               )}
             </AnimatePresence>
-          </GlassCard>
+            </GlassCard>
+          </div>
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };
 
 // --- Helper Components ---
-const MemoryLayer = ({ id, title, color, subtitle, children, isActive }) => (
-  <div className={`relative p-5 rounded-2xl border transition-all duration-500 ${isActive ? 'bg-white/10 border-white/40 shadow-2xl scale-[1.01]' : 'bg-white/5 border-white/5'}`} style={{ backdropFilter: 'blur(10px)' }}>
+const MemoryLayer = ({ id, title, color, subtitle, children, isActive, className = '' }) => (
+  <div className={`relative p-5 rounded-2xl border transition-all duration-500 ${isActive ? 'bg-white/10 border-white/40 shadow-2xl scale-[1.01]' : 'bg-white/5 border-white/5'} ${className}`} style={{ backdropFilter: 'blur(10px)' }}>
     <div className="flex justify-between items-start mb-4">
       <div>
         <h3 className="text-xs font-black tracking-[0.2em] mb-1" style={{ color }}>{title}</h3>
-        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{subtitle}</p>
+        {subtitle ? (
+          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{subtitle}</p>
+        ) : null}
       </div>
       <Layers size={14} className="text-slate-600" />
     </div>
