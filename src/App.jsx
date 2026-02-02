@@ -89,7 +89,7 @@ const TECH_SPECS = {
     label: "NORMAL TRACE",
     icon: <Binary className="text-sky-400" size={18} />,
     paragraphs: [
-      "This is just a normal tracing and it provides the best isolation. Two layers of isolation = two layers of translation. The VM has no idea it’s being virtualised. WhatsApp thinks it’s running on real hardware with real addresses. It’s completely fooled. This is why it can run Windows inside Linux without Windows knowing.",
+      "This is just a normal tracing and it provides a good isolation. Two layers of isolation = two layers of translation. The VM has no idea it’s being virtualised. WhatsApp thinks it’s running on real hardware with real addresses. It’s completely fooled. This is why it can run Windows inside Linux without Windows knowing.",
       "This approach with double translation isn’t great because it creates delays, slows down the system and takes memory to store all these addresses. A normal app makes millions of memory accesses per second. Each access needs two translations. That’s why even a tiny delay per translation may create big issues on running virtualisation.",
       "This is where hardware-assisted virtualisation comes in. Modern CPUs have special features that handle memory translation in hardware instead of software. This makes the double translation much faster and reduces the performance overhead significantly. It’s also called SLAT architecture."
     ]
@@ -214,15 +214,8 @@ const App = () => {
              backgroundSize: '40px 40px'
            }} />
       
-      <div className="relative z-10 max-w-[1400px] mx-auto w-full">
-        <header className="flex flex-col items-start mb-4 gap-1 border-b border-white/5 pb-2">
-          <div className="pl-5">
-            <h1 className="text-3xl font-black tracking-[0.2em] text-white uppercase leading-none" style={{ fontFamily: FONT_TECH }}>
-              Memory Management Virtualisation
-            </h1>
-          </div>
-
-        </header>
+      <div className="relative z-10 max-w-[1300px] mx-auto w-full">
+        
 
         <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
         
